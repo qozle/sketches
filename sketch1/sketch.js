@@ -1,9 +1,11 @@
-let sketch = function(p) {
+//  use instance mode
+let sketch = function (p) {
 
 	//  GLOBAL STUFF
 	const level = 7;
 	const rates = [];
 
+	//  this is for capturing the frames to make them into a gif later on
 	var capturer = new CCapture({
 		format: 'png',
 		workersPath: '../ccapture/',
@@ -18,10 +20,12 @@ let sketch = function(p) {
 		rates[i]["a"] = p.random(0, 180);
 		rates[i]["b"] = p.random(0, 180);
 	}
-	console.log(rates);
+
+	// console.log(rates);
 
 
 	
+	//  FIRST FRAME SETUP
 	p.setup = function() {
 		p.createCanvas(720, 560);
 		// p.noStroke();
@@ -30,7 +34,7 @@ let sketch = function(p) {
 		p.frameRate(60);
 	}
 
-
+	//  DRAW LOOP
 	p.draw = function () {
 		//  start capturing.  can't put this in setup, known bug
 		if (p.frameCount === 1) capturer.start();
@@ -39,6 +43,9 @@ let sketch = function(p) {
 		p.translate(p.width / 2, p.height / 2);
 		p.rotate((p.frameCount  + rates[6]["a"]) % 360);
 		drawCircle(0, 280, level);
+
+
+		//  capture 300 frames, stop the sketch
 		capturer.capture(document.getElementById("defaultCanvas0"));
 		if (p.frameCount === 300) {
 			capturer.stop();
@@ -46,8 +53,10 @@ let sketch = function(p) {
 			p.noLoop();
 			return;
 		}
+
 	}
 
+	//  ...draw circle
 	function drawCircle(x, radius, level) {
 
 		const tt = (126 * level) / 4.0;
@@ -69,15 +78,15 @@ let sketch = function(p) {
 			p.rotate((p.frameCount + rates[level]["b"]) % 360);
 			drawCircle(0, radius / 2, level);
 			// p.line(0, -radius / 2, 0, radius / 2);
-			p.pop();
-			
-		}
+			p.pop();			
+		}		
 
-		
+
 	}
 
 }
 
+//  use instance mode.
 new p5(sketch, 'container');
 
 
