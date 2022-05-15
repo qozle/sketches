@@ -157,7 +157,31 @@ let sketch = function (p) {
 					//  don't update by our own vectors
 					if (tri == this) return;
 
-					let dist = p.dist(this.pos.x, this.pos.y, tri.pos.x, tri.pos.y);
+					//  have to create temp vals for pos because we're going to handle wrapping
+					let targetX = tri.pos.x;
+					let targetY = tri.pos.y;
+
+					//  to deal with wrapping, we'll figure out the normal distance
+					//  and the wrapped distance and use the shorter of the two
+					let distX = Math.abs(this.pos.x - tri.pos.x);
+					let distY = Math.abs(this.pos.y - tri.pos.y);
+
+					//  if either distance is greater than half the width / height, then 
+					//  pretend the the target is past the boundary for vector purposes
+					if (distX > p.width / 2) {
+						if (this.pos.x >= 0) targetX = p.width / 2 - targetX;
+						else targetX = -p.width / 2 - targetX;
+					}
+
+					if (distY > p.height / 2) {
+						if (this.pos.y >= 0) targetY = p.height / 2 - targetY;
+						else targetY = -p.height / 2 - targetY
+					}
+
+
+					//  distance
+					let dist = p.dist(this.pos.x, this.pos.y, targetX, targetY);
+
 
 					if (dist <= this.pRadius) {
 						force.add(tri.vel);
@@ -167,12 +191,12 @@ let sketch = function (p) {
 				});
 
 				if (count) {
+					this.isFlocking = true;
 					this.doWander = false;
 					force.div(count);
 					force.setMag(this.maxSpeed);
 					force.sub(this.vel);
 					force.limit(this.maxForce);
-					this.isFlocking = true;
 					return force;
 				} else {
 					this.isFlocking = false;
@@ -193,9 +217,26 @@ let sketch = function (p) {
 					//  don't update by our own vectors
 					if (tri == this) return;
 
-					//  how far to keep away
-					//  this allows some to be antisocial and some to be more social
+					//  have to create temp vals for pos because we're going to handle wrapping
+					let targetX = tri.pos.x;
+					let targetY = tri.pos.y;
+
+					//  to deal with wrapping, we'll figure out the normal distance
+					//  and the wrapped distance and use the shorter of the two
+					let distX = Math.abs(this.pos.x - tri.pos.x);
+					let distY = Math.abs(this.pos.y - tri.pos.y);
+
+					//  if either distance is greater than half the width / height, then 
+					//  pretend the the target is past the boundary for vector purposes
+					if (distX > p.width / 2) {
+						if (this.pos.x >= 0) targetX = p.width / 2 - targetX;
+						else targetX = -p.width / 2 - targetX;
+					}
 					
+					if (distY > p.height / 2) {
+						if (this.pos.y >= 0) targetY = p.height / 2 - targetY;
+						else targetY = -p.height / 2 - targetY
+					}
 
 					//  how far to actually keep away.  we estimate a radius around the triangle
 					//  by whichever is larger, it's width or height.  it *should* be within the 
@@ -203,11 +244,11 @@ let sketch = function (p) {
 					let keepDist = this.width > this.height ? this.width + this.safeRadius : this.height + this.safeRadius;
 
 					//  distance, center to center
-					let dist = p.dist(tri.pos.x, tri.pos.y, this.pos.x, this.pos.y);
+					let dist = p.dist(targetX, targetY, this.pos.x, this.pos.y);
 
 					if (dist <= keepDist) {
 						//  'desired' vector
-						let diff = p5.Vector.sub(this.pos, tri.pos);
+						let diff = p5.Vector.sub(this.pos, p.createVector(targetX, targetY));
 						//  set the 'weight'?  squared inverse force from distance
 						diff.div(dist * dist);
 						force.add(diff);
@@ -328,24 +369,22 @@ let sketch = function (p) {
 
 				//  constantly shrink, faster if it's bigger, slower if it's smaller
 				if (this.height > 50) this.maxHeight -= .3;
-				else if (this.height < 10) this.maxHeight -= .1
+				else if (this.height < 10) this.maxHeight -= .01
 				else this.maxHeight -= .03;
 
 				if (this.width > 50) this.maxWidth -= .3;
-				else if (this.width < 10) this.maxWidth -= .1
+				else if (this.width < 10) this.maxWidth -= .01
 				else this.maxWidth -= .03;
 
-
-				this.maxHeight -= .03;
-				this.maxWidth -= .03;
-
+				//  manage size
 				this.grow();
+				//  manage edges
 				this.edges();
 
 				// console.log(this.width, this.height);
 
 
-				//  if you don't have a target, get a target
+				//  if you don't have a target, try to get a target
 				if (this.target == null) {
 					this.target = this.getTarget(snapshot);
 					this.accel.add(this.wander());
@@ -353,11 +392,11 @@ let sketch = function (p) {
 					this.accel.add(this.seek(snapshot));
 				}
 
-
+				//  determine accel, move
 				this.vel.add(this.accel);
 				this.vel.limit(this.maxSpeed);
 				this.pos.add(this.vel);
-
+				//  clear accel bc it's recalculated every time
 				this.accel.mult(0);
 			}
 
@@ -367,10 +406,33 @@ let sketch = function (p) {
 				let targets = [];
 				
 				for (let i = 0; i < snapshot.length; i++){
-	
+
 					let tri = snapshot[i];
+
+					//  have to create temp vals for pos because we're going to handle wrapping
+					let targetX = tri.pos.x;
+					let targetY = tri.pos.y;
+
+					//  to deal with wrapping, we'll figure out the normal distance
+					//  and the wrapped distance and use the shorter of the two
+					let distX = Math.abs(this.pos.x - tri.pos.x);
+					let distY = Math.abs(this.pos.y - tri.pos.y);
+
+					//  if either distance is greater than half the width / height, then 
+					//  pretend the the target is past the boundary for vector purposes
+					if (distX > p.width / 2) {
+						if (this.pos.x >= 0) targetX = p.width / 2 - targetX;
+						else targetX = -p.width / 2 - targetX;
+					}
+					
+					if (distY > p.height / 2) {
+						if (this.pos.y >= 0) targetY = p.height / 2 - targetY;
+						else targetY = -p.height / 2 - targetY
+					}
+
+	
 				
-					let dist = p.dist(this.pos.x, this.pos.y, tri.pos.x, tri.pos.y);
+					let dist = p.dist(this.pos.x, this.pos.y, targetX, targetY);
 	
 					if (dist <= this.targetRange) {
 
@@ -387,13 +449,40 @@ let sketch = function (p) {
 				}
 			}
 
+
+
 			seek(snapshot) {
 				let target = snapshot[this.target];
 
 				let range = this.height > this.width ? this.height / 2 : this.width / 2;
 
+				//  have to create temp vals for pos because we're going to handle wrapping
+				let targetX = target.pos.x;
+				let targetY = target.pos.y;
+
+				//  to deal with wrapping, we'll figure out the normal distance
+				//  and the wrapped distance and use the shorter of the two
+				let distX = Math.abs(this.pos.x - target.pos.x);
+				let distY = Math.abs(this.pos.y - target.pos.y);
+
+				console.log(distX, distY);
+
+				//  if either distance is greater than half the width / height, then 
+				//  pretend the the target is past the boundary for vector purposes
+				if (distX > p.width / 2) {
+					if (this.pos.x >= 0) targetX = p.width / 2 - targetX;
+					else targetX = -p.width / 2 - targetX;
+				}
+				
+				if (distY > p.height / 2) {
+					if (this.pos.y >= 0) targetY = p.height / 2 - targetY;
+					else targetY = -p.height / 2 - targetY
+				}
+
+
+
 				//  'eat' target
-				if (p.dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y) < range) {
+				if (p.dist(this.pos.x, this.pos.y, targetX, targetY) < range) {
 					//  remove triangle from triangles array
 					triangles.splice(this.target, 1);
 					numTriangles--;
@@ -413,7 +502,7 @@ let sketch = function (p) {
 
 				} else {
 					//  chase target
-					let force = p5.Vector.sub(target.pos, this.pos);
+					let force = p5.Vector.sub(p.createVector(targetX, targetY), this.pos);
 					force.setMag(this.maxSpeed);
 					force.sub(this.velocity);
 					force.limit(this.maxForce);
@@ -457,8 +546,6 @@ let sketch = function (p) {
 			if (numTriangles < maxCount) {
 				triangles.push(new Triangle());
 				numTriangles++;
-			} else {
-				clearInterval(triangle_interval);
 			}
 		}
 
