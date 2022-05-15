@@ -12,213 +12,467 @@ let sketch = function (p) {
 
 
 
-	class Triangle {
+	/*  
+	Behaviors:
+		-  'Wander' -- Adds perlin vector to acceleration
 
-		constructor(posx, posy, width, height) {
-			this.width = p.random(10, width);
-			this.height = p.random(10, height);
-			this.speed = p.random() + 1;
-			this.maxSpeed = 8;
-			this.maxWidth = this.height + p.random(50);
-			this.maxHeight = this.height + p.random(50);
-			this.perlin = p.random(10000);
+		-  'Flock'  -- Stay close to others, align to average velocity
+
+		-  'Avert'  -- Avoid collision
+	*/
 
 
-			
-			this.pos = p.createVector(posx, posy);
-			this.velocity = p.createVector().mult(0);
-			this.acceleration = p.createVector().mult(0);
-
-
-			this.p1 = p.createVector(
-				this.pos.x - this.width / 2,
-				this.pos.y - this.height / 2
-			);
-			this.p2 = p.createVector(
-				this.pos.x + this.width / 2,
-				this.pos.y - this.height / 2
-			);
-			this.p3 = p.createVector(this.pos.x, this.pos.y + this.height / 2);
-		}
-
-		update() {
-
-			//  increase the height and width until they're max
-			if (this.width < this.maxWidth) this.width++;
-			if (this.height < this.maxHeight) this.height++;
-
-			
-			//  add acceleration to velocity
-			this.velocity.add(this.acceleration);
-			//  normalize
-			// this.velocity.normalize();
-			//  add speed
-			// this.velocity.mult(this.speed);
-			//  limit the speed to the max speed
-			this.velocity.limit(this.maxSpeed);
-			//  move the triangle
-			this.pos.add(this.velocity);
-			//  clear out the acceleration because it will be recalculated next frame
-			this.acceleration.mult(0);
-
-
-			//  wrap
-			if (this.pos.x + this.width / 2 >= p.width / 2 || this.pos.x - this.width / 2 <= -p.width / 2) {
-				this.pos.x = -this.pos.x;
-			}
-
-			if (this.pos.y + this.height / 2 >= p.height / 2 || this.pos.y - this.height / 2 <= -p.height / 2) {
-				this.pos.y = -this.pos.y;
-			}
-
-		}
-
-
-		perlinForce() {
-
-			//  each triangle wanders to its own noise
-			p.noiseSeed(this.perlin);
-
-			let randomVector = p.createVector(
-				(((p.noise(p.frameCount / 25) * 2) - 1) * this.speed),
-				(((p.noise(p.frameCount / 25 + 1000) * 2) - 1) * this.speed)
-			);
-
-			//  add randomVector to acceleration, which should be
-			//  the sum of all force vectors
-			this.acceleration.add(randomVector);
-		}
-
-
-		averse() {
-			
-			triangles.forEach((tri) => {
-				let centerDist = p.dist(tri.pos.x, tri.pos.y, this.pos.x, this.pos.y);
-				let keepDist = tri.width + tri.height + this.width + this.height;
-
-				if (centerDist <= keepDist) {
-
-					//  create a vector pointing away from the point
-					let averseV = p5.Vector.fromAngle(this.pos.angleBetween(tri.pos));
-					averseV.setMag(p.map(centerDist, keepDist, 0, 0, this.maxSpeed));
-		
-					this.acceleration.sub(averseV);
-
-				}
 	
-			});
-		}
-
-
-
-		show() {
-			p.push();
-
-			p.noFill();
-			p.stroke(100);
-
-			//  translate to the position of the triangle
-			p.translate(this.pos.x, this.pos.y)
-
-			//  so the upper point is facing the 
-			p.rotate(this.velocity.heading() - 90);
-
-			
-			//  update points for triangle
-			this.p1.x = 0 - this.width / 2;
-			this.p1.y = 0 - this.height / 2;
-
-			this.p2.x = 0 + this.width / 2;
-			this.p2.y = 0 - this.height / 2;
-
-			this.p3.x = 0;
-			this.p3.y = 0 + this.height / 2;
-
-			
-
-			p.triangle(
-				this.p1.x,
-				this.p1.y,
-				this.p2.x,
-				this.p2.y,
-				this.p3.x,
-				this.p3.y
-			);
-
-			p.line(0, this.height / 2, 0, -this.height / 2)
-
-			// p.fill(255, 0, 0);
-			// p.circle(0, 0, 5)
-			
-			// //p1 BLUE bottom left
-			// p.stroke(0, 0, 255);
-			// p.circle(this.p1.x, this.p1.y, this.height + this.width);
-
-			// //p2 GREEN bottom right
-			// p.stroke(0, 255, 0);
-			// p.circle(this.p2.x, this.p2.y, this.height + this.width);
-
-			// //p3 PURPLE top
-			// p.stroke(255, 0, 255);
-			// p.circle(this.p3.x, this.p3.y, this.height + this.width);
-
-			p.stroke(0, 0, 255);
-			p.circle(0, 0, (this.height + this.width));
-
-
-
-			p.pop();
-		}
-  	}	
-
-
-
-
-	function make_triangle() {
-		if (count < maxCount) {
-			
-			triangles.push(new Triangle(p.random(p.width / 2), p.random(p.height / 2), 1, 1));
-
-			count++;
-
-		} else {
-			clearInterval(triangle_interval);
-		}
-
-		
-	}
-
-
 	//  array of triangles
-	var triangles = [];
-	let count = 0;
-	let maxCount = 50;
+	let triangles = [];
+	let breakers = [];
+	let numTriangles = 0;
+	let maxCount = 35;
 
 
-
-	make_triangle();
-	triangle_interval = setInterval(make_triangle, 5000);	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+	
+	
+	
+	
 	//  FIRST FRAME SETUP
 	p.setup = function () {
+
 		p.angleMode(p.DEGREES);
 		p.rectMode(p.CENTER);
 		p.frameRate(30);
-		p.createCanvas(878, 639);
+		p.createCanvas(1000, 950);
 		// p.noLoop();
+		
+
+		//  not sure where else to declare this because we're in instanced mode...
+		class Triangle {
+			constructor(posx = p.random(p.width / 2), posy = p.random(p.height / 2), width = 1, height = 1) {
+				this.width = p.random(10, width);
+				this.height = p.random(10, height);
+				this.maxSpeed = 4;
+				this.maxForce = 1;
+				this.maxWidth = this.height + p.random(15);
+				this.maxHeight = this.height + p.random(15);
+				this.perlin = p.random(10000);
+				this.doWander = true;
+				this.pRadius = p.random(125);
+				this.safeRadius = p.random(30, 60);
+				this.isAvoiding = false;
+				this.isFlockng = false;
+
+
+
+				
+				this.pos = p.createVector(posx, posy);
+				this.vel = p.createVector().mult(0);
+				this.accel = p5.Vector.random2D();
+
+
+				this.p1 = p.createVector(
+					this.pos.x - this.width / 2,
+					this.pos.y - this.height / 2
+				);
+				this.p2 = p.createVector(
+					this.pos.x + this.width / 2,
+					this.pos.y - this.height / 2
+				);
+				this.p3 = p.createVector(this.pos.x, this.pos.y + this.height / 2);
+			}
+
+
+			edges() {
+				//  wrap
+				if (this.pos.x > p.width / 2) this.pos.x = -p.width / 2;
+				else if (this.pos.x < -p.width / 2) this.pos.x = p.width / 2;
+	
+				if (this.pos.y > p.height / 2) this.pos.y = -p.height / 2;
+				else if (this.pos.y < -p.height / 2) this.pos.y = p.height / 2;				
+			}
+
+
+			grow() {
+				//  increase the height and width until they're max
+				if (this.width < this.maxWidth) this.width += .5;
+				if (this.height < this.maxHeight) this.height += .5;
+			}
+
+			update(snapshot) {
+
+				this.grow();
+				this.edges();
+				
+
+				//  update acceleration with behavioural forces
+				this.accel.add(this.wander());
+				this.accel.add(this.flock(snapshot));
+				this.accel.add(this.avoid(snapshot));
+
+				//  add accel to velocity, make sure it doesn't go faster than max speed
+				this.vel.add(this.accel);
+				this.vel.limit(this.maxSpeed);
+
+				//  update position
+				this.pos.add(this.vel);
+
+				//  clear out the acceleration because it will be recalculated next frame
+				this.accel.mult(0);
+			}
+
+
+			//  veer from original vector
+			wander() {
+
+				if (this.doWander == false) return p.createVector().mult(0);
+
+				//  each triangle wanders to its own noise
+				p.noiseSeed(this.perlin);
+				
+				//  get 'random' vector from particular perlin series
+				let force = p.createVector(
+					((p.noise(p.frameCount / 1000) * 2) - 1),
+					((p.noise(p.frameCount / 1000 + 1000) * 2) - 1)
+				);
+
+
+				//  set magnitude (strength of the force?)
+				force.setMag(this.maxSpeed);
+				force.limit(this.maxForce);
+
+				return force;
+			}
+
+
+			flock(snapshot) {
+
+				//  align, cohesive
+
+				//  radius to flock to / with ("perception radius")
+				let count = 0;
+				let force = p.createVector();
+
+				//  align
+				snapshot.forEach((tri) => {
+
+					//  don't update by our own vectors
+					if (tri == this) return;
+
+					let dist = p.dist(this.pos.x, this.pos.y, tri.pos.x, tri.pos.y);
+
+					if (dist <= this.pRadius) {
+						force.add(tri.vel);
+						count++;
+					}
+
+				});
+
+				if (count) {
+					this.doWander = false;
+					force.div(count);
+					force.setMag(this.maxSpeed);
+					force.sub(this.vel);
+					force.limit(this.maxForce);
+					this.isFlocking = true;
+					return force;
+				} else {
+					this.isFlocking = false;
+					this.doWander = true;
+					force.mult(0);
+					return force.mult(0);
+				}
+			}
+
+
+			avoid(snapshot) {
+
+				let force = p.createVector();
+				let count = 0;
+				
+				snapshot.forEach((tri) => {
+
+					//  don't update by our own vectors
+					if (tri == this) return;
+
+					//  how far to keep away
+					//  this allows some to be antisocial and some to be more social
+					
+
+					//  how far to actually keep away.  we estimate a radius around the triangle
+					//  by whichever is larger, it's width or height.  it *should* be within the 
+					//  radius calculated.
+					let keepDist = this.width > this.height ? this.width + this.safeRadius : this.height + this.safeRadius;
+
+					//  distance, center to center
+					let dist = p.dist(tri.pos.x, tri.pos.y, this.pos.x, this.pos.y);
+
+					if (dist <= keepDist) {
+						//  'desired' vector
+						let diff = p5.Vector.sub(this.pos, tri.pos);
+						//  set the 'weight'?  squared inverse force from distance
+						diff.div(dist * dist);
+						force.add(diff);
+						count++;
+					}
+
+				});
+				
+
+				if (count) {
+					force.div(count);
+					force.setMag(this.maxSpeed);
+					force.sub(this.vel);
+					force.limit(.3);
+					this.isAvoiding = true;
+				}
+				else {
+					force.mult(0);
+					this.isAvoiding = false;
+				}
+
+
+				return force;
+			}
+
+
+
+			show(red = 50, green = 50, blue = 50) {
+				p.push();
+
+				// let red = this.doWander ? 200 : 0;
+				// let green = this.isAvoiding ? 200 : 0;
+				// let blue = this.isFlocking ? 200 : 0;
+				// p.noFill();
+
+				if (breakers.length && triangles.indexOf(this) == breakers[0].target) {
+					blue = 200;
+					green = 200;
+				}
+
+				//  red if wandering, blue if flocking
+				p.fill(red, green, blue);
+
+				p.stroke(100);
+
+				//  translate to the position of the triangle
+				p.translate(this.pos.x, this.pos.y)
+
+				//  so the upper point is facing the 
+				p.rotate(this.vel.heading() - 90);
+
+				
+				//  update points for triangle
+				this.p1.x = 0 - this.width / 2;
+				this.p1.y = 0 - this.height / 2;
+
+				this.p2.x = 0 + this.width / 2;
+				this.p2.y = 0 - this.height / 2;
+
+				this.p3.x = 0;
+				this.p3.y = 0 + this.height / 2;
+				
+
+				p.triangle(
+					//  p1
+					this.p1.x,
+					this.p1.y,
+					//  p2
+					this.p2.x,
+					this.p2.y,
+					//  p3
+					this.p3.x,
+					this.p3.y
+				);
+
+				p.line(0, this.height / 2, 0, -this.height / 2)
+
+				// p.fill(255, 0, 0);
+				// p.circle(0, 0, 5)
+				
+				// //p1 BLUE bottom left
+				// p.stroke(0, 0, 255);
+				// p.circle(this.p1.x, this.p1.y, this.height + this.width);
+
+				// //p2 GREEN bottom right
+				// p.stroke(0, 255, 0);
+				// p.circle(this.p2.x, this.p2.y, this.height + this.width);
+
+				// //p3 PURPLE top
+				// p.stroke(255, 0, 255);
+				// p.circle(this.p3.x, this.p3.y, this.height + this.width);
+
+				// p.stroke(0, 0, 255);
+				// p.circle(0, 0, (this.height + this.width));
+
+
+
+				p.pop();
+			}
+		}	
+
+
+
+
+		class Breaker extends Triangle {
+
+			constructor(posx, posy, width, height) {
+				super(posx, posy, width, height);
+
+				this.target = null;
+				this.targetRange = 100;
+				this.maxSpeed = 5;
+
+
+			}
+
+			update(snapshot) {
+
+				//  constantly shrink, faster if it's bigger, slower if it's smaller
+				if (this.height > 50) this.maxHeight -= .3;
+				else if (this.height < 10) this.maxHeight -= .1
+				else this.maxHeight -= .03;
+
+				if (this.width > 50) this.maxWidth -= .3;
+				else if (this.width < 10) this.maxWidth -= .1
+				else this.maxWidth -= .03;
+
+
+				this.maxHeight -= .03;
+				this.maxWidth -= .03;
+
+				this.grow();
+				this.edges();
+
+				// console.log(this.width, this.height);
+
+
+				//  if you don't have a target, get a target
+				if (this.target == null) {
+					this.target = this.getTarget(snapshot);
+					this.accel.add(this.wander());
+				} else {
+					this.accel.add(this.seek(snapshot));
+				}
+
+
+				this.vel.add(this.accel);
+				this.vel.limit(this.maxSpeed);
+				this.pos.add(this.vel);
+
+				this.accel.mult(0);
+			}
+
+
+			getTarget(snapshot) {
+
+				let targets = [];
+				
+				for (let i = 0; i < snapshot.length; i++){
+	
+					let tri = snapshot[i];
+				
+					let dist = p.dist(this.pos.x, this.pos.y, tri.pos.x, tri.pos.y);
+	
+					if (dist <= this.targetRange) {
+
+						//  add to potential targets
+						targets.push(i)
+					}
+				}
+
+				if (targets.length) {
+					//  target is an index of snapshot
+					return targets[Math.floor(Math.random() * targets.length)];					
+				} else {
+					return null;
+				}
+			}
+
+			seek(snapshot) {
+				let target = snapshot[this.target];
+
+				let range = this.height > this.width ? this.height / 2 : this.width / 2;
+
+				//  'eat' target
+				if (p.dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y) < range) {
+					//  remove triangle from triangles array
+					triangles.splice(this.target, 1);
+					numTriangles--;
+
+					//  increase max width and height so it'll grow a bit bigger
+					this.maxWidth += target.width;
+					this.maxHeight += target.height;
+
+					//  empty the target so it'll find a new one
+					this.target = null;
+
+					//  make a new random seed so we go in a different direction
+					this.perlin = p.random(10000);
+
+					//  return 0'd vector
+					return p.createVector().mult(0);
+
+				} else {
+					//  chase target
+					let force = p5.Vector.sub(target.pos, this.pos);
+					force.setMag(this.maxSpeed);
+					force.sub(this.velocity);
+					force.limit(this.maxForce);
+					return force;
+				}
+
+
+			}
+
+			//  constantly shrink so it doesn't get huge.
+			grow() {
+
+				
+				if (this.width < this.maxWidth) this.width += .5;
+				if (this.height < this.maxHeight) this.height += .5;
+
+
+				if (this.width > this.maxWidth) this.width -= .05;
+
+				if (this.height > this.maxHeight) this.height -= .05;
+
+				//  die if we get too small
+				if (this.width <= 0 || this.height <= 0) {
+					breakers.splice(breakers.indexOf(this), 1);
+					breakers.push(new Breaker());
+				}
+
+			}
+
+		}
+		
+
+
+
+
+
+
+
+		//  make a new triangle every interval until we hit maxcount
+		function make_triangle() {
+			if (numTriangles < maxCount) {
+				triangles.push(new Triangle());
+				numTriangles++;
+			} else {
+				clearInterval(triangle_interval);
+			}
+		}
+
+
+		//  make a breaker
+		for (let i = 0; i < 5; i++){
+			make_triangle();
+		}
+
+		breakers.push(new Breaker())
+
+		triangle_interval = setInterval(make_triangle, 5000);	
+
+
 
 	}
 
@@ -226,16 +480,27 @@ let sketch = function (p) {
 	//  DRAW LOOP
 	p.draw = function () {
 
-		p.background(255);
+		p.background(0, 50, 225);
 		p.translate(p.width / 2, p.height / 2);
 		p.angleMode(p.DEGREES);
 
+		if (breakers.length == 0) breakers.push(new Breaker());
+
+		//  get our snapshots before we update anything
+		snapshot = triangles;
+		b_snapeshot = breakers;
+
 		triangles.forEach((triangle) => {
-			triangle.averse();
-			triangle.perlinForce();
-			triangle.update();
+			triangle.update(snapshot);
 			triangle.show();
 		});
+
+		breakers.forEach((breaker) => {
+			breaker.update(snapshot);
+			breaker.show(255, 0, 0);
+		});
+
+
 
 
 		//  capture 300 frames, stop the sketch
@@ -248,14 +513,6 @@ let sketch = function (p) {
 		// }
 
 	}
-
-
-
-	
-	
-
-
-
 
 
 }
