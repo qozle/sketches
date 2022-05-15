@@ -41,7 +41,7 @@ let sketch = function (p) {
 		p.angleMode(p.DEGREES);
 		p.rectMode(p.CENTER);
 		p.frameRate(30);
-		p.createCanvas(1000, 950);
+		p.createCanvas(window.innerWidth, window.innerHeight);
 		// p.noLoop();
 		
 
@@ -567,6 +567,10 @@ let sketch = function (p) {
 	//  DRAW LOOP
 	p.draw = function () {
 
+		
+
+
+
 		p.background(0, 50, 225);
 		p.translate(p.width / 2, p.height / 2);
 		p.angleMode(p.DEGREES);
@@ -599,6 +603,13 @@ let sketch = function (p) {
 		// 	return;
 		// }
 
+	}
+
+
+
+	//  RESIZE CANVAS TO WINDOW SIZE
+	p.windowResized = function () {
+		p.resizeCanvas(window.innerWidth, window.innerHeight);
 	}
 
 
